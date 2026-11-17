@@ -1,0 +1,4 @@
+apache-flink>=1.18.0; platform_machine != "arm64"
+google-cloud-bigquery>=3.17.0
+kafka-python>=2.0.2
+pytest>=8.0.0

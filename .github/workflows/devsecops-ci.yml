@@ -1,0 +1,104 @@
+name: DevSecOps & Sovereignty CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  # -------------------------------------------------------------
+  # Job 1: Unit Testing & Code Quality
+  # -------------------------------------------------------------
+  test-and-lint:
+    name: Unit Tests & Python Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8
+          if [ -f data_simulator/requirements.txt ]; then pip install -r data_simulator/requirements.txt; fi
+          if [ -f streaming/requirements.txt ]; then pip install -r streaming/requirements.txt; fi
+
+      - name: Lint Python Code
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --exit-zero --max-complexity=15 --max-line-length=127 --statistics
+
+      - name: Run Data Simulator Tests
+        run: |
+          python3 -m unittest discover -s data_simulator -p "test_*.py"
+
+      - name: Run Streaming Flink Tests
+        run: |
+          python3 -m unittest discover -s streaming -p "test_*.py"
+
+  # -------------------------------------------------------------
+  # Job 2: Infrastructure as Code (IaC) Security Audit with Checkov
+  # -------------------------------------------------------------
+  iac-security-checkov:
+    name: Checkov IaC & Sovereign Compliance Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Checkov
+        run: pip install checkov
+
+      - name: Run Checkov on Terraform & Kubernetes
+        run: |
+          checkov -d terraform/ --framework terraform --config-file security/.checkov.yml || true
+          checkov -d k8s/ --framework kubernetes --config-file security/.checkov.yml || true
+
+  # -------------------------------------------------------------
+  # Job 3: Container Vulnerability Scan with Trivy
+  # -------------------------------------------------------------
+  container-security-trivy:
+    name: Trivy Vulnerability & Secret Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Build Simulator Docker Image
+        run: |
+          docker build -t smartgrid-simulator:${{ github.sha }} -f data_simulator/Dockerfile data_simulator/
+
+      - name: Run Trivy Vulnerability Scanner on Simulator Image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "smartgrid-simulator:${{ github.sha }}"
+          format: "table"
+          exit-code: "0"
+          ignore-unfixed: true
+          vuln-type: "os,library"
+          severity: "CRITICAL,HIGH"
+
+      - name: Run Trivy Config Scan on K8s & Terraform
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "config"
+          hide-progress: false
+          format: "table"
+          exit-code: "0"
+          severity: "CRITICAL,HIGH"

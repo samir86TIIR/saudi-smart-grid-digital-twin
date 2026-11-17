@@ -1,0 +1,8 @@
+project_id  = "ksa-smartgrid-prod"
+region      = "me-central2" # Dammam, Kingdom of Saudi Arabia
+environment = "production"
+network_name = "ksa-smartgrid-vpc"
+subnet_cidr  = "10.100.0.0/20"
+pods_cidr    = "10.101.0.0/16"
+services_cidr= "10.102.0.0/20"
+dataset_id   = "smart_grid_ksa_dw"

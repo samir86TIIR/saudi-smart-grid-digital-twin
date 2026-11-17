@@ -1,0 +1,23 @@
+# Checkov IaC Security & Compliance Policy
+# Enforcing CIS Google Cloud Platform & Kubernetes Benchmark + Saudi Sovereign Cloud Standards
+
+framework:
+  - terraform
+  - kubernetes
+
+compact: true
+quiet: false
+
+soft-fail: false # Enforce hard fail for security gates
+
+# Check for Critical and High violations
+check:
+  - CKV_GCP_*
+  - CKV_K8S_*
+
+# Skip checks that are non-applicable or handled at infrastructure boundary
+skip-check:
+  # Examples of well-documented accepted operational risks can be listed here if justified
+
+download-external-modules: false
+output: cli

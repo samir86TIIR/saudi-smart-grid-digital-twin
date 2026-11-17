@@ -1,0 +1,164 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: smart-grid
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# Allow Kafka brokers to communicate with each other, receive telemetry from Simulator, and serve Flink
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-kafka-traffic
+  namespace: smart-grid
+spec:
+  podSelector:
+    matchLabels:
+      app: kafka
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow intra-Kafka communication (KRaft quorum & replication)
+    - from:
+        - podSelector:
+            matchLabels:
+              app: kafka
+      ports:
+        - protocol: TCP
+          port: 9092
+        - protocol: TCP
+          port: 9093
+    # Allow Simulator to produce events
+    - from:
+        - podSelector:
+            matchLabels:
+              app: data-simulator
+      ports:
+        - protocol: TCP
+          port: 9092
+    # Allow Flink TaskManager to consume events
+    - from:
+        - podSelector:
+            matchLabels:
+              app: flink
+      ports:
+        - protocol: TCP
+          port: 9092
+  egress:
+    # Allow intra-Kafka replication
+    - to:
+        - podSelector:
+            matchLabels:
+              app: kafka
+      ports:
+        - protocol: TCP
+          port: 9092
+        - protocol: TCP
+          port: 9093
+    # Allow CoreDNS resolution
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+---
+# Allow Flink Stream Processor to communicate with Kafka and egress to BigQuery API
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-flink-traffic
+  namespace: smart-grid
+spec:
+  podSelector:
+    matchLabels:
+      app: flink
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Internal communication between JobManager and TaskManagers
+    - from:
+        - podSelector:
+            matchLabels:
+              app: flink
+      ports:
+        - protocol: TCP
+          port: 6123
+        - protocol: TCP
+          port: 6124
+        - protocol: TCP
+          port: 6122
+  egress:
+    # Inter-Flink communication
+    - to:
+        - podSelector:
+            matchLabels:
+              app: flink
+      ports:
+        - protocol: TCP
+          port: 6123
+        - protocol: TCP
+          port: 6124
+        - protocol: TCP
+          port: 6122
+    # Connect to Kafka cluster
+    - to:
+        - podSelector:
+            matchLabels:
+              app: kafka
+      ports:
+        - protocol: TCP
+          port: 9092
+    # Connect to GCP BigQuery & Google APIs (Private Google Access via NAT / Subnet)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 443
+    # DNS lookup
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+---
+# Allow Simulator to produce to Kafka only
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-simulator-egress
+  namespace: smart-grid
+spec:
+  podSelector:
+    matchLabels:
+      app: data-simulator
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: kafka
+      ports:
+        - protocol: TCP
+          port: 9092
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53

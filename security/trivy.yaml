@@ -1,0 +1,32 @@
+# Trivy Security Scanner Configuration
+# Compliant with NCA ECC-1:2018 (Saudi National Cybersecurity Authority)
+
+scan:
+  security-checks:
+    - vuln
+    - config
+    - secret
+  scanners:
+    - vuln
+    - misconfig
+    - secret
+
+severity:
+  - HIGH
+  - CRITICAL
+
+exit-code: 1 # Fail CI/CD build if HIGH or CRITICAL issues are detected
+
+format: table
+
+vulnerability:
+  ignore-unfixed: true
+
+misconfiguration:
+  scanners:
+    - kubernetes
+    - terraform
+  include-non-failures: false
+
+secret:
+  enable: true

@@ -1,0 +1,81 @@
+version: "3.8"
+
+networks:
+  smartgrid-net:
+    driver: bridge
+
+services:
+  # -------------------------------------------------------------
+  # Apache Kafka (KRaft mode - No Zookeeper needed)
+  # -------------------------------------------------------------
+  kafka:
+    image: bitnami/kafka:3.7.0
+    container_name: smartgrid-kafka
+    networks:
+      - smartgrid-net
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      - KAFKA_CFG_NODE_ID=0
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_KRAFT_CLUSTER_ID=4L622nShTUiBenDuAapnsG
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+      - KAFKA_CFG_DEFAULT_REPLICATION_FACTOR=1
+      - KAFKA_CFG_NUM_PARTITIONS=6
+
+  # -------------------------------------------------------------
+  # IoT Smart Meter Simulator (KAPSARC-calibrated)
+  # -------------------------------------------------------------
+  data-simulator:
+    build:
+      context: ./data_simulator
+      dockerfile: Dockerfile
+    container_name: smartgrid-simulator
+    networks:
+      - smartgrid-net
+    depends_on:
+      - kafka
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_TOPIC=smartmeter.telemetry
+    command: ["--rate", "3000", "--duration", "0", "--bootstrap-servers", "kafka:9092"]
+
+  # -------------------------------------------------------------
+  # Apache Flink JobManager (Web UI on http://localhost:8081)
+  # -------------------------------------------------------------
+  flink-jobmanager:
+    image: apache/flink:1.18.1-scala_2.12-java11
+    container_name: smartgrid-flink-jobmanager
+    networks:
+      - smartgrid-net
+    ports:
+      - "8081:8081"
+    command: jobmanager
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+        parallelism.default: 2
+
+  # -------------------------------------------------------------
+  # Apache Flink TaskManager
+  # -------------------------------------------------------------
+  flink-taskmanager:
+    image: apache/flink:1.18.1-scala_2.12-java11
+    container_name: smartgrid-flink-taskmanager
+    networks:
+      - smartgrid-net
+    depends_on:
+      - flink-jobmanager
+    command: taskmanager
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+        taskmanager.numberOfTaskSlots: 4
+        parallelism.default: 2

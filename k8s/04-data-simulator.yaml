@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: data-simulator
+  namespace: smart-grid
+  labels:
+    app: data-simulator
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: data-simulator
+  template:
+    metadata:
+      labels:
+        app: data-simulator
+    spec:
+      serviceAccountName: simulator-serviceaccount
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: simulator
+          image: smartgrid-simulator:latest
+          imagePullPolicy: IfNotPresent
+          command: ["python", "-m", "data_simulator.main"]
+          args:
+            - "--rate"
+            - "5000"
+            - "--duration"
+            - "0"
+            - "--bootstrap-servers"
+            - "kafka-service.smart-grid.svc.cluster.local:9092"
+            - "--topic"
+            - "smartmeter.telemetry"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "1500m"
+              memory: "1Gi"
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: data-simulator-hpa
+  namespace: smart-grid
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: data-simulator
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
