@@ -2,15 +2,31 @@ name: DevSecOps & Sovereignty CI/CD Pipeline
 
 on:
   push:
-    branches: [main, master, develop]
+    branches: [main, develop]
   pull_request:
-    branches: [main, master]
+    branches: [main, develop]
 
 permissions:
   contents: read
   security-events: write
 
 jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Semantic Release
+        uses: cycjimmy/semantic-release-action@v4
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: code checkout
+        uses: actions/checkout@v4
   # -------------------------------------------------------------
   # Job 1: Unit Testing & Code Quality
   # -------------------------------------------------------------
