@@ -11,4 +11,3 @@ htmlcov/
 .terraform.lock.hcl
 *.log
 .env
-*.agent.md
