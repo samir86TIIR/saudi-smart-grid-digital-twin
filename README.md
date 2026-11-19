@@ -226,12 +226,6 @@ trivy image smartgrid-simulator:latest
 
 ```text
 smart_grid_ksa/
-├── .agents/                        # Specialized Expert Agent definitions
-│   ├── data-simulator.md           # Senior Data Engineer persona
-│   ├── devsecops-finops.md         # DevSecOps & FinOps auditor persona
-│   ├── platform-engineer.md        # GCP Cloud Platform Engineer persona
-│   ├── streaming-architect.md      # Lead Streaming Architect persona
-│   └── tech-evangelist.md          # B2B Tech Evangelist & Copywriter persona
 ├── .github/
 │   └── workflows/
 │       └── devsecops-ci.yml        # Automated GitHub Actions CI/CD pipeline
