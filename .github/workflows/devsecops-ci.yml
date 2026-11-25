@@ -2,12 +2,14 @@ name: DevSecOps & Sovereignty CI/CD Pipeline
 
 on:
   push:
-    branches: [main, master, develop]
+    branches: [main, develop]
   pull_request:
-    branches: [main, master]
+    branches: [main, develop]
 
 permissions:
-  contents: read
+  contents: write
+  issues: write
+  pull-requests: write
   security-events: write
 
 jobs:
@@ -102,3 +104,26 @@ jobs:
           format: "table"
           exit-code: "0"
           severity: "CRITICAL,HIGH"
+
+  # -------------------------------------------------------------
+  # Job 4: Semantic Release (Runs on main branch after tests pass)
+  # -------------------------------------------------------------
+  release:
+    name: Automated Semantic Release
+    needs: [test-and-lint]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Semantic Release
+        uses: cycjimmy/semantic-release-action@v4
+        with:
+          extra_plugins: |
+            @semantic-release/changelog
+            @semantic-release/git
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
