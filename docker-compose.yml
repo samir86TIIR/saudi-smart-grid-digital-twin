@@ -32,7 +32,7 @@ services:
       - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
       - KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS=0
     healthcheck:
-      test: [ "CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 || exit 1" ]
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -54,7 +54,7 @@ services:
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
       - KAFKA_TOPIC=smartmeter.telemetry
-    command: [ "--rate", "3000", "--duration", "0", "--bootstrap-servers", "kafka:29092" ]
+    command: ["--rate", "3000", "--duration", "0", "--bootstrap-servers", "kafka:29092"]
 
   # -------------------------------------------------------------
   # Apache Flink JobManager (Web UI on http://localhost:8081)
