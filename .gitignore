@@ -12,3 +12,5 @@ htmlcov/
 *.log
 .env
 *.agent.md
+node_modules/
+frontend/dist/
