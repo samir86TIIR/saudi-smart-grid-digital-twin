@@ -15,14 +15,17 @@ LABEL compliance="NCA ECC-1:2018 / SDAIA Sovereign Cloud Standards"
 
 WORKDIR /app
 
-# DevSecOps: Create a dedicated non-root user
-RUN groupadd -g 10001 appgroup && \
+# DevSecOps: Create a dedicated non-root user and install runtime libs
+RUN apt-get update && apt-get install -y --no-install-recommends libsnappy1v5 && \
+    rm -rf /var/lib/apt/lists/* && \
+    groupadd -g 10001 appgroup && \
     useradd -u 10001 -g appgroup -s /bin/false -m appuser
 
-COPY --from=builder /root/.local /home/appuser/.local
-COPY . /app
+COPY --from=builder --chown=10001:10001 /root/.local /home/appuser/.local
+COPY --chown=10001:10001 . /app/data_simulator
 
 ENV PATH=/home/appuser/.local/bin:$PATH \
+    PYTHONPATH=/app \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
